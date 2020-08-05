@@ -61,7 +61,7 @@ class Keyv extends EventEmitter {
 					return undefined;
 				}
 
-				if (typeof data.expires === 'number' && Date.now() > data.expires) {
+				if (data && typeof data.expires === 'number' && Date.now() > data.expires) {
 					this.delete(key);
 					return undefined;
 				}
