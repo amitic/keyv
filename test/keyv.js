@@ -3,6 +3,16 @@ import tk from 'timekeeper';
 import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'this';
 
+class MultiMap extends Map {
+	mget(keys) {
+		return keys.map(k => this.get(k));
+	}
+
+	mset(keys, values) {
+		return keys.map((key, idx) => this.set(key, values[idx]));
+	}
+}
+
 test.serial('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');
 	t.throws(() => Keyv()); // eslint-disable-line new-cap
@@ -122,6 +132,54 @@ test.serial('Keyv supports async serializer/deserializer', async t => {
 	const keyv = new Keyv({ store, serialize, deserialize });
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
+});
+
+test.serial('mset(hash)/mget work with an adapter with no native support', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.mset({
+		foo1: 'bar1',
+		foo2: 'bar2'
+	});
+	const values = await keyv.mget(['foo1', 'foo2']);
+	t.deepEqual(values, ['bar1', 'bar2']);
+});
+
+test.serial('mset(array, array)/mget work with an adapter with no native support', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.mset(
+		['foo1', 'foo2'],
+		['bar1', 'bar2'],
+		{ concurrency: 1 }
+	);
+	const values = await keyv.mget(['foo1', 'foo2']);
+	t.deepEqual(values, ['bar1', 'bar2']);
+});
+
+test.serial('mset(hash)/mget work with an adapter with native support', async t => {
+	const store = new MultiMap();
+	const keyv = new Keyv({ store });
+	await keyv.mset(
+		{
+			foo1: 'bar1',
+			foo2: 'bar2'
+		},
+		{ concurrency: 1 }
+	);
+	const values = await keyv.mget(['foo1', 'foo2']);
+	t.deepEqual(values, ['bar1', 'bar2']);
+});
+
+test.serial('mset(array, array)/mget work with an adapter with native support', async t => {
+	const store = new MultiMap();
+	const keyv = new Keyv({ store });
+	await keyv.mset(
+		['foo1', 'foo2'],
+		['bar1', 'bar2']
+	);
+	const values = await keyv.mget(['foo1', 'foo2']);
+	t.deepEqual(values, ['bar1', 'bar2']);
 });
 
 const store = () => new Map();
